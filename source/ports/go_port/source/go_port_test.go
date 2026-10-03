@@ -421,15 +421,15 @@ def getClass():
 }
 
 func TestNodeJSFuture(t *testing.T) {
-	script := `                                                                                                                  
-        module.exports = {                                                                                                           
-            asyncAdd: async (a, b) => {                                                                                                  
-                return a + b;                                                                                                                
-            },                                                                                                                           
-            asyncFail: async (msg) => {                                                                                                  
-                throw new Error(msg);                                                                                                        
-            },                                                                                                                           
-        };                                                                                                                           
+	script := `
+        module.exports = {
+            asyncAdd: async (a, b) => {
+                return a + b;
+            },
+            asyncFail: async (msg) => {
+                throw new Error(msg);
+            },
+        };
         `
 
 	if err := LoadFromMemory("node", script); err != nil {

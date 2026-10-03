@@ -429,7 +429,11 @@ func CallUnsafe(function string, args ...interface{}) (interface{}, error) {
 	ret := C.metacallfv_s(cFunc, (*unsafe.Pointer)(cArgs), length)
 
 	if ret != nil {
-		defer C.metacall_value_destroy(ret)
+		// can't destroy future data until the refrenced one in go is nolonger wanted
+		id := C.metacall_value_id(ret)
+		if id != C.METACALL_FUTURE {
+			defer C.metacall_value_destroy(ret)
+		}
 
 		v := valueToGo(ret)
 		if err, ok := v.(error); ok {
@@ -535,7 +539,11 @@ func AwaitUnsafe(function string, resolve, reject awaitCallback, ctx interface{}
 	ret := C.metacallfv_await_struct_s(cFunc, (*unsafe.Pointer)(cArgs), length, cCallbacks, goCallbacksPtr)
 
 	if ret != nil {
-		defer C.metacall_value_destroy(ret)
+		// can't destroy future data until the refrenced one in go is nolonger wanted
+		id := C.metacall_value_id(ret)
+		if id != C.METACALL_FUTURE {
+			defer C.metacall_value_destroy(ret)
+		}
 
 		v := valueToGo(ret)
 		if err, ok := v.(error); ok {

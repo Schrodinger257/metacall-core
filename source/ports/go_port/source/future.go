@@ -46,17 +46,6 @@ func (f *Future) Await() (interface{}, error) {
 		return nil, errors.New("can't call async on nil future")
 	}
 
-	// Keep f alive until Await finishes to prevent early finalizer destruction
-
-	// destroy the handle when future complete
-	defer func() {
-		if f.val != nil {
-			C.metacall_value_destroy(f.val)
-			f.ptr = nil
-			f.val = nil
-		}
-	}()
-
 	retValCh := make(chan futureResult, 1)
 
 	//create callbacks for metacall_await_future to use them via goReject & goResolve
@@ -87,6 +76,8 @@ func (f *Future) Await() (interface{}, error) {
 		return nil, errors.New("failed to get value from future")
 	}
 
+	// Keep f alive until Await finishes to prevent early finalizer destruction
 	runtime.KeepAlive(f)
+
 	return ret.value, ret.err
 }
