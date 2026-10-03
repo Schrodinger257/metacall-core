@@ -96,8 +96,9 @@ func (c *Class) StaticGet(key string) (interface{}, error) {
 		return nil, errors.New("no attribute with this name: " + key)
 	}
 
+	// can't destroy future data until the refrenced one in go is nolonger wanted
 	id := C.metacall_value_id(ret)
-	if id != C.METACALL_CLASS && id != C.METACALL_OBJECT && id != C.METACALL_FUTURE {
+	if id != C.METACALL_FUTURE {
 		defer C.metacall_value_destroy(ret)
 	}
 
