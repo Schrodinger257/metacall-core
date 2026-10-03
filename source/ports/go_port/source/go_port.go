@@ -884,6 +884,7 @@ func valueToGo(value unsafe.Pointer) interface{} {
 		{
 			throw := C.metacall_value_to_throwable(unsafe.Pointer(value))
 			val := C.metacall_throwable_value(throw)
+			defer C.metacall_value_destroy(val)
 			v := valueToGo(val)
 
 			if err, ok := v.(error); ok {

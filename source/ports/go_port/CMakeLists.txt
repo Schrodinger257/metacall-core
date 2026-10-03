@@ -59,18 +59,34 @@ set(sources
 )
 
 # Flags
-set(GO_FLAGS "-race")
+# set(GO_FLAGS "")
+# set(GO_SAN_FLAGS "")
 
 # set to debug so that the pprof server starts and records the data
 set(GO_MODE "MODE=debug")
 
 
 include(Portability)
+if(OPTION_BUILD_ADDRESS_SANITIZER)
+	set(CGO_SAN_FLAGS "-fsanitize=address,undefined")
+	message(DEBUG "==== Using C Address Sanitizer ====")
+elseif(OPTION_BUILD_THREAD_SANITIZER)
+	set(CGO_SAN_FLAGS "-fsanitize=thread")
+	message(DEBUG "==== Using C Thread Sanitizer ====")
+elseif(OPTION_BUILD_MEMORY_SANITIZER)
+	set(CGO_SAN_FLAGS "-fsanitize=memory")
+	message(DEBUG "==== Using C Memory Sanitizer ====")
+else()
+	# Flags
+	set(GO_FLAGS "-race")
+	message(DEBUG "==== Using GO RACE Detector ====")
+endif()
 
 add_custom_target(${target}
 	COMMAND ${CMAKE_COMMAND}
-		-DGOPATH="${GOPATH}"
+	-DGOPATH="${GOPATH}"
 		-DGO_FLAGS="${GO_FLAGS}"
+		-DCGO_SAN_FLAGS="${CGO_SAN_FLAGS}"
 		-DCC="${CMAKE_C_COMPILER}"
 		-DCMAKE_Go_COMPILER="${CMAKE_Go_COMPILER}"
 		-DCGO_CFLAGS="-I${CMAKE_SOURCE_DIR}/source/metacall/include -I${CMAKE_BINARY_DIR}/source/metacall/include -I${CMAKE_BINARY_DIR}/source/include ${CGO_EXTRA_CFLAGS} -Wall"
@@ -80,23 +96,20 @@ add_custom_target(${target}
 		-DGO_TASK="build"
 		-DSANITIZER_COMPILE_DEFINITIONS=${SANITIZER_COMPILE_DEFINITIONS}
 		-P ${CMAKE_CURRENT_SOURCE_DIR}/source/go_port.cmake
-	SOURCES ${sources}
-	DEPENDS ${sources}
-)
-
-#
-# Define test
-#
-
-if(OPTION_BUILD_ADDRESS_SANITIZER OR OPTION_BUILD_THREAD_SANITIZER OR OPTION_BUILD_MEMORY_SANITIZER)
-	# TODO: Not implemented (https://go.googlesource.com/go/+/go1.7/misc/cgo/testsanitizers/test.bash)
-	return()
-endif()
+		SOURCES ${sources}
+		DEPENDS ${sources}
+	)
+	
+	#
+	# Define test
+	#
+	
 
 add_test(NAME ${target}
 	COMMAND ${CMAKE_COMMAND}
 		-DGOPATH="${GOPATH}"
 		-DGO_FLAGS="${GO_FLAGS}"
+		-DCGO_SAN_FLAGS="${CGO_SAN_FLAGS}"
 		-DCC="${CMAKE_C_COMPILER}"
 		-DCMAKE_Go_COMPILER="${CMAKE_Go_COMPILER}"
 		-DCGO_CFLAGS="-I${CMAKE_SOURCE_DIR}/source/metacall/include -I${CMAKE_BINARY_DIR}/source/metacall/include -I${CMAKE_BINARY_DIR}/source/include ${CGO_EXTRA_CFLAGS} -Wall"

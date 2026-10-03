@@ -24,6 +24,8 @@ string(REPLACE "\"" "" GO_PPROF_TASK "${GO_PPROF_TASK}")
 string(REPLACE "\"" "" PPROF_ARG "${PPROF_ARG}")
 string(REPLACE "\"" "" GO_PPROF_GOROUTINE "${GO_PPROF_GOROUTINE}")
 string(REPLACE "\"" "" CC "${CC}")
+string(REPLACE "\"" "" CGO_SAN_FLAGS "${CGO_SAN_FLAGS}")
+
 
 if(NOT "${SANITIZER_COMPILE_DEFINITIONS}" STREQUAL "")
     set(CGO_CFLAGS "${CGO_CFLAGS} -D${SANITIZER_COMPILE_DEFINITIONS}")
@@ -32,8 +34,8 @@ endif()
 
 # Override CGO flags
 file(READ "${CMAKE_CURRENT_LIST_DIR}/go_port.go" FILE_CONTENTS)
-string(REPLACE "#cgo CFLAGS: -Wall" "#cgo CFLAGS: ${CGO_CFLAGS}" FILE_CONTENTS "${FILE_CONTENTS}")
-string(REPLACE "#cgo LDFLAGS: -lmetacall" "#cgo LDFLAGS: ${CGO_LDFLAGS}" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "#cgo CFLAGS: -Wall" "#cgo CFLAGS: ${CGO_CFLAGS} ${CGO_SAN_FLAGS}" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "#cgo LDFLAGS: -lmetacall" "#cgo LDFLAGS: ${CGO_LDFLAGS} ${CGO_SAN_FLAGS}" FILE_CONTENTS "${FILE_CONTENTS}")
 file(WRITE "${CMAKE_CURRENT_LIST_DIR}/go_port.go" "${FILE_CONTENTS}")
 
 execute_process(COMMAND
@@ -45,8 +47,8 @@ execute_process(COMMAND
 )
 
 # Restore CGO flags
-string(REPLACE "#cgo CFLAGS: ${CGO_CFLAGS}" "#cgo CFLAGS: -Wall" FILE_CONTENTS "${FILE_CONTENTS}")
-string(REPLACE "#cgo LDFLAGS: ${CGO_LDFLAGS}" "#cgo LDFLAGS: -lmetacall" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "#cgo CFLAGS: ${CGO_CFLAGS} ${CGO_SAN_FLAGS}" "#cgo CFLAGS: -Wall" FILE_CONTENTS "${FILE_CONTENTS}")
+string(REPLACE "#cgo LDFLAGS: ${CGO_LDFLAGS} ${CGO_SAN_FLAGS}" "#cgo LDFLAGS: -lmetacall" FILE_CONTENTS "${FILE_CONTENTS}")
 file(WRITE "${CMAKE_CURRENT_LIST_DIR}/go_port.go" "${FILE_CONTENTS}")
 
 message(STATUS "${OUTPUT}")
