@@ -429,11 +429,7 @@ func CallUnsafe(function string, args ...interface{}) (interface{}, error) {
 	ret := C.metacallfv_s(cFunc, (*unsafe.Pointer)(cArgs), length)
 
 	if ret != nil {
-		id := C.metacall_value_id(ret)
-		// calling value destroy on these types make the ptr in them a dangling pointer which causes a segfault when dereferencing
-		if id != C.METACALL_CLASS && id != C.METACALL_OBJECT && id != C.METACALL_FUTURE {
-			defer C.metacall_value_destroy(ret)
-		}
+		defer C.metacall_value_destroy(ret)
 
 		v := valueToGo(ret)
 		if err, ok := v.(error); ok {
@@ -539,11 +535,8 @@ func AwaitUnsafe(function string, resolve, reject awaitCallback, ctx interface{}
 	ret := C.metacallfv_await_struct_s(cFunc, (*unsafe.Pointer)(cArgs), length, cCallbacks, goCallbacksPtr)
 
 	if ret != nil {
-		id := C.metacall_value_id(ret)
-		// calling value destroy on these types make the ptr in them a dangling pointer which causes a segfault when dereferencing
-		if id != C.METACALL_CLASS && id != C.METACALL_OBJECT && id != C.METACALL_FUTURE {
-			defer C.metacall_value_destroy(ret)
-		}
+		defer C.metacall_value_destroy(ret)
+
 		v := valueToGo(ret)
 		if err, ok := v.(error); ok {
 			return nil, err

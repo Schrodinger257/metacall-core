@@ -23,8 +23,11 @@ type Class struct {
 }
 
 func newClass(value unsafe.Pointer) *Class {
-	p := C.metacall_value_to_class(value)
-	cls := &Class{val: value, ptr: p}
+	// copy ownership so that calling metacall_value_destroy in callUnsafe and awaitUnsafe
+	// do not create a dangling pointer and then cause a segfault when calling staticGet or staticSet
+	cpyVal := C.metacall_value_copy(value)
+	p := C.metacall_value_to_class(cpyVal)
+	cls := &Class{val: cpyVal, ptr: p}
 	// associate a finalizer so when value is not needed anymore GC destroy and free it
 	runtime.SetFinalizer(cls, func(c *Class) {
 		if c.val != nil {
@@ -40,8 +43,6 @@ func (c *Class) New(name string, args ...interface{}) (*Object, error) {
 	if c.ptr == nil {
 		return nil, errors.New("can't use nil ptr for class creation")
 	}
-
-	defer runtime.KeepAlive(c)
 
 	cName := C.CString(name)
 	defer C.free(unsafe.Pointer(cName))
@@ -69,11 +70,13 @@ func (c *Class) New(name string, args ...interface{}) (*Object, error) {
 	}
 
 	cls := C.metacall_class_new(c.ptr, cName, (*unsafe.Pointer)(cArgs), argNum)
+	defer C.metacall_value_destroy(cls)
 
 	if cls == nil {
 		return nil, errors.New("failed to create class: " + name)
 	}
 
+	runtime.KeepAlive(c)
 	obj := newObject(cls, c)
 
 	return obj, nil
@@ -83,8 +86,6 @@ func (c *Class) StaticGet(key string) (interface{}, error) {
 	if c.ptr == nil {
 		return nil, errors.New("can't get attribute of nil class")
 	}
-
-	defer runtime.KeepAlive(c)
 
 	cKey := C.CString(key)
 	defer C.free(unsafe.Pointer(cKey))
@@ -102,6 +103,7 @@ func (c *Class) StaticGet(key string) (interface{}, error) {
 
 	val := valueToGo(ret)
 
+	runtime.KeepAlive(c)
 	return val, nil
 }
 

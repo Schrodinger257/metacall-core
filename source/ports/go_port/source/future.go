@@ -28,8 +28,9 @@ type futureResult struct {
 }
 
 func newFuture(value unsafe.Pointer) *Future {
-	p := C.metacall_value_to_future(value)
-	fut := &Future{val: value, ptr: p}
+	cpyVal := C.metacall_value_copy(value)
+	p := C.metacall_value_to_future(cpyVal)
+	fut := &Future{val: cpyVal, ptr: p}
 	runtime.SetFinalizer(fut, func(f *Future) {
 		if f.val != nil {
 			C.metacall_value_destroy(f.val)
@@ -46,7 +47,6 @@ func (f *Future) Await() (interface{}, error) {
 	}
 
 	// Keep f alive until Await finishes to prevent early finalizer destruction
-	defer runtime.KeepAlive(f)
 
 	// destroy the handle when future complete
 	defer func() {
@@ -87,5 +87,6 @@ func (f *Future) Await() (interface{}, error) {
 		return nil, errors.New("failed to get value from future")
 	}
 
+	runtime.KeepAlive(f)
 	return ret.value, ret.err
 }

@@ -24,8 +24,9 @@ type Object struct {
 }
 
 func newObject(value unsafe.Pointer, cls *Class) *Object {
-	p := C.metacall_value_to_object(value)
-	obj := &Object{parentCls: cls, val: value, ptr: p}
+	cpyVal := C.metacall_value_copy(value)
+	p := C.metacall_value_to_object(cpyVal)
+	obj := &Object{parentCls: cls, val: cpyVal, ptr: p}
 	// associate a finalizer so when value is not needed anymore GC destroy and free it
 	runtime.SetFinalizer(obj, func(o *Object) {
 		if o.val != nil {
@@ -43,8 +44,6 @@ func (o *Object) Get(key string) (interface{}, error) {
 		return nil, errors.New("can't get attribute of nil object")
 	}
 
-	defer runtime.KeepAlive(o)
-
 	cKey := C.CString(key)
 	defer C.free(unsafe.Pointer(cKey))
 
@@ -60,6 +59,7 @@ func (o *Object) Get(key string) (interface{}, error) {
 
 	val := valueToGo(ret)
 
+	runtime.KeepAlive(o)
 	return val, nil
 }
 
@@ -67,8 +67,6 @@ func (o *Object) Set(key string, val interface{}) error {
 	if o.ptr == nil {
 		return errors.New("can't set attribute of nil object")
 	}
-
-	defer runtime.KeepAlive(o)
 
 	cKey := C.CString(key)
 	defer C.free(unsafe.Pointer(cKey))
@@ -84,6 +82,7 @@ func (o *Object) Set(key string, val interface{}) error {
 		return errors.New("failed to set value to key " + key)
 	}
 
+	runtime.KeepAlive(o)
 	return nil
 }
 
@@ -91,8 +90,6 @@ func (o *Object) Call(method string, args ...interface{}) (interface{}, error) {
 	if o.ptr == nil {
 		return nil, errors.New("can't call method of nil object")
 	}
-
-	defer runtime.KeepAlive(o)
 
 	cMethod := C.CString(method)
 	defer C.free(unsafe.Pointer(cMethod))
@@ -131,5 +128,6 @@ func (o *Object) Call(method string, args ...interface{}) (interface{}, error) {
 
 	val := valueToGo(ret)
 
+	runtime.KeepAlive(o)
 	return val, nil
 }
