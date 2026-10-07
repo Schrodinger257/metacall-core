@@ -23,11 +23,8 @@ type Class struct {
 }
 
 func newClass(value unsafe.Pointer) *Class {
-	// copy ownership so that calling metacall_value_destroy in callUnsafe and awaitUnsafe
-	// do not create a dangling pointer and then cause a segfault when calling staticGet or staticSet
-	cpyVal := C.metacall_value_copy(value)
-	p := C.metacall_value_to_class(cpyVal)
-	cls := &Class{val: cpyVal, ptr: p}
+	p := C.metacall_value_to_class(value)
+	cls := &Class{val: value, ptr: p}
 	// associate a finalizer so when value is not needed anymore GC destroy and free it
 	runtime.SetFinalizer(cls, func(c *Class) {
 		if c.val != nil {
@@ -70,7 +67,6 @@ func (c *Class) New(name string, args ...interface{}) (*Object, error) {
 	}
 
 	cls := C.metacall_class_new(c.ptr, cName, (*unsafe.Pointer)(cArgs), argNum)
-	defer C.metacall_value_destroy(cls)
 
 	if cls == nil {
 		return nil, errors.New("failed to create class: " + name)
@@ -96,9 +92,8 @@ func (c *Class) StaticGet(key string) (interface{}, error) {
 		return nil, errors.New("no attribute with this name: " + key)
 	}
 
-	// can't destroy future data until the refrenced one in go is nolonger wanted
 	id := C.metacall_value_id(ret)
-	if id != C.METACALL_FUTURE {
+	if id != C.METACALL_FUTURE && id != C.METACALL_CLASS && id != C.METACALL_OBJECT {
 		defer C.metacall_value_destroy(ret)
 	}
 

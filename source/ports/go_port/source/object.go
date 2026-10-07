@@ -24,9 +24,8 @@ type Object struct {
 }
 
 func newObject(value unsafe.Pointer, cls *Class) *Object {
-	cpyVal := C.metacall_value_copy(value)
-	p := C.metacall_value_to_object(cpyVal)
-	obj := &Object{parentCls: cls, val: cpyVal, ptr: p}
+	p := C.metacall_value_to_object(value)
+	obj := &Object{parentCls: cls, val: value, ptr: p}
 	// associate a finalizer so when value is not needed anymore GC destroy and free it
 	runtime.SetFinalizer(obj, func(o *Object) {
 		if o.val != nil {
@@ -52,9 +51,8 @@ func (o *Object) Get(key string) (interface{}, error) {
 		return nil, errors.New("no attribute with this name: " + key)
 	}
 
-	// can't destroy future data until the refrenced one in go is nolonger wanted
 	id := C.metacall_value_id(ret)
-	if id != C.METACALL_FUTURE {
+	if id != C.METACALL_FUTURE && id != C.METACALL_CLASS && id != C.METACALL_OBJECT {
 		defer C.metacall_value_destroy(ret)
 	}
 
@@ -123,7 +121,7 @@ func (o *Object) Call(method string, args ...interface{}) (interface{}, error) {
 	}
 
 	id := C.metacall_value_id(ret)
-	if id != C.METACALL_CLASS && id != C.METACALL_OBJECT && id != C.METACALL_FUTURE {
+	if id != C.METACALL_FUTURE && id != C.METACALL_CLASS && id != C.METACALL_OBJECT {
 		defer C.metacall_value_destroy(ret)
 	}
 

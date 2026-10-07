@@ -28,9 +28,8 @@ type futureResult struct {
 }
 
 func newFuture(value unsafe.Pointer) *Future {
-	cpyVal := C.metacall_value_copy(value)
-	p := C.metacall_value_to_future(cpyVal)
-	fut := &Future{val: cpyVal, ptr: p}
+	p := C.metacall_value_to_future(value)
+	fut := &Future{val: value, ptr: p}
 	runtime.SetFinalizer(fut, func(f *Future) {
 		if f.val != nil {
 			C.metacall_value_destroy(f.val)
